@@ -25,5 +25,8 @@
     "react-native-wifi-p2p": "^3.6.0",
     "react-native-zeroconf": "^0.13.8"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@types/react": "^19.2.7"
+  }
 }
