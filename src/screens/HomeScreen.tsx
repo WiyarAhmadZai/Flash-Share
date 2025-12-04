@@ -6,14 +6,11 @@ import {
   FlatList,
   TouchableOpacity,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  Platform,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-
-type Device = {
-  id: string;
-  name: string;
-};
+import { useWifiP2p, Peer } from '../modules/wifiP2p';
 
 type TransferStatus = 'pending' | 'in-progress' | 'completed' | 'failed';
 
@@ -25,19 +22,8 @@ type Transfer = {
 };
 
 export const HomeScreen: React.FC = () => {
-  const [devices, setDevices] = useState<Device[]>([]);
+  const { peers, startDiscovery, connectTo } = useWifiP2p();
   const [transfers, setTransfers] = useState<Transfer[]>([]);
-
-  const startDiscovery = useCallback(() => {
-    // TODO: Implement device discovery via Wi-Fi Direct / Multipeer / mDNS
-    // For now, maybe stub a fake device list if needed
-    setDevices([]);
-  }, []);
-
-  const connectToDevice = useCallback((id: string) => {
-    // TODO: Implement connect logic
-    console.log('connectToDevice', id);
-  }, []);
 
   const pickFiles = useCallback(async () => {
     try {
@@ -64,20 +50,27 @@ export const HomeScreen: React.FC = () => {
     }
   }, []);
 
-  const sendFile = useCallback((file: Transfer, device: Device) => {
+    const sendFile = useCallback((file: Transfer, device: Peer) => {
     // TODO: Implement actual send logic (TCP / streams, resume, checksum, etc.)
     console.log('sendFile', { file, device });
   }, []);
 
-  const renderDeviceItem = ({ item }: { item: Device }) => (
+    const connectToDevice = useCallback((address: string) => {
+    if (Platform.OS === 'android') {
+      connectTo(address);
+    }
+    // TODO: Add iOS connect logic here
+  }, [connectTo]);
+
+  const renderDeviceItem = ({ item }: { item: Peer }) => (
     <View style={styles.deviceRow}>
       <View>
-        <Text style={styles.deviceName}>{item.name}</Text>
+        <Text style={styles.deviceName}>{item.deviceName}</Text>
         <Text style={styles.deviceSubtitle}>Tap connect to pair</Text>
       </View>
       <TouchableOpacity
         style={styles.deviceButton}
-        onPress={() => connectToDevice(item.id)}
+        onPress={() => connectToDevice(item.deviceAddress)}
       >
         <Text style={styles.deviceButtonText}>Connect</Text>
       </TouchableOpacity>
@@ -123,14 +116,14 @@ export const HomeScreen: React.FC = () => {
         </View>
 
         <View style={styles.card}>
-          {devices.length === 0 ? (
+          {peers.length === 0 ? (
             <Text style={styles.emptyText}>
               No devices found yet. Tap Scan to search.
             </Text>
           ) : (
             <FlatList
-              data={devices}
-              keyExtractor={item => item.id}
+              data={peers}
+              keyExtractor={item => item.deviceAddress}
               renderItem={renderDeviceItem}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
             />
