@@ -17,7 +17,7 @@
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-fs": "^2.20.0",
-    "react-native-multipeer-connectivity": "^0.1.0",
+    "react-native-multipeer": "^0.1.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-simple-crypto": "^0.2.15",
@@ -27,6 +27,9 @@
   },
   "private": true,
   "devDependencies": {
-    "@types/react": "^19.2.7"
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-native-zeroconf": "^0.13.1",
+    "typescript": "~5.9.2"
   }
 }
