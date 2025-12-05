@@ -143,7 +143,12 @@ export const HomeScreen: React.FC = () => {
         </View>
       </Modal>
       <View style={styles.container}>
-        <Text style={styles.title}>FlashShare</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>FlashShare</Text>
+          <TouchableOpacity style={styles.chipButton} onPress={() => navigation.navigate('Settings')}>
+            <Text style={styles.chipButtonText}>Settings</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.subtitle}>
           Fast, simple device-to-device file sharing.
         </Text>
@@ -243,6 +248,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
