@@ -7,10 +7,15 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  Modal,
   Platform,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import { useWifiP2p, Peer } from '../modules/wifiP2p';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../App';
+import { usePeerDiscovery, GenericPeer } from '../modules/usePeerDiscovery';
+import { formatBytes } from '../utils/formatters';
 
 type TransferStatus = 'pending' | 'in-progress' | 'completed' | 'failed';
 
@@ -22,8 +27,11 @@ type Transfer = {
 };
 
 export const HomeScreen: React.FC = () => {
-  const { peers, startDiscovery, connectTo } = useWifiP2p();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { peers, startDiscovery, connectTo } = usePeerDiscovery();
   const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [isReceiving, setIsReceiving] = useState(false); // Controls the modal
+  const [incomingTransfer, setIncomingTransfer] = useState({ sender: 'PeerDevice-1', files: ['document.pdf', 'image.jpg'], totalSize: 1234567 });
 
   const pickFiles = useCallback(async () => {
     try {
@@ -50,27 +58,24 @@ export const HomeScreen: React.FC = () => {
     }
   }, []);
 
-    const sendFile = useCallback((file: Transfer, device: Peer) => {
+      const sendFile = useCallback((file: Transfer, device: GenericPeer) => {
     // TODO: Implement actual send logic (TCP / streams, resume, checksum, etc.)
     console.log('sendFile', { file, device });
   }, []);
 
-    const connectToDevice = useCallback((address: string) => {
-    if (Platform.OS === 'android') {
-      connectTo(address);
-    }
-    // TODO: Add iOS connect logic here
+      const connectToDevice = useCallback((peerId: string) => {
+    connectTo(peerId);
   }, [connectTo]);
 
-  const renderDeviceItem = ({ item }: { item: Peer }) => (
+    const renderDeviceItem = ({ item }: { item: GenericPeer }) => (
     <View style={styles.deviceRow}>
       <View>
-        <Text style={styles.deviceName}>{item.deviceName}</Text>
+        <Text style={styles.deviceName}>{item.name}</Text>
         <Text style={styles.deviceSubtitle}>Tap connect to pair</Text>
       </View>
       <TouchableOpacity
         style={styles.deviceButton}
-        onPress={() => connectToDevice(item.deviceAddress)}
+        onPress={() => connectToDevice(item.id)}
       >
         <Text style={styles.deviceButtonText}>Connect</Text>
       </TouchableOpacity>
@@ -102,6 +107,41 @@ export const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isReceiving}
+        onRequestClose={() => setIsReceiving(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalTitle}>Incoming Transfer</Text>
+            <Text style={styles.modalText}>From: {incomingTransfer.sender}</Text>
+            <Text style={styles.modalText}>Files: {incomingTransfer.files.join(', ')}</Text>
+            <Text style={styles.modalText}>Total Size: {formatBytes(incomingTransfer.totalSize)}</Text>
+            
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.declineButton]}
+                onPress={() => setIsReceiving(false)}
+              >
+                <Text style={styles.buttonText}>Decline</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.acceptButton]}
+                onPress={() => {
+                  setIsReceiving(false);
+                  // TODO: Add logic to accept transfer and navigate
+                  navigation.navigate('Transfers');
+                }}
+              >
+                <Text style={styles.buttonText}>Accept</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <View style={styles.container}>
         <Text style={styles.title}>FlashShare</Text>
         <Text style={styles.subtitle}>
@@ -123,7 +163,7 @@ export const HomeScreen: React.FC = () => {
           ) : (
             <FlatList
               data={peers}
-              keyExtractor={item => item.deviceAddress}
+              keyExtractor={item => item.id}
               renderItem={renderDeviceItem}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
             />
@@ -134,8 +174,23 @@ export const HomeScreen: React.FC = () => {
           <Text style={styles.primaryButtonText}>Select files</Text>
         </TouchableOpacity>
 
+        {/* Navigation to Perf Test Screen */}
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('PerfTest')}>
+          <Text style={styles.secondaryButtonText}>Performance Test</Text>
+        </TouchableOpacity>
+
+        {/* Manual trigger for the modal */}
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => setIsReceiving(true)}>
+            <Text style={styles.secondaryButtonText}>Simulate Incoming Transfer</Text>
+        </TouchableOpacity>
+
         <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Transfers</Text>
+          <TouchableOpacity style={styles.chipButton} onPress={() => navigation.navigate('Transfers')}>
+            <Text style={styles.chipButtonText}>View All</Text>
+          </TouchableOpacity>
+        </View>
         </View>
 
         <View style={[styles.card, styles.flexGrow]}>
@@ -311,5 +366,76 @@ const styles = StyleSheet.create({
   },
   flexGrow: {
     flex: 1
-  }
+  },
+  secondaryButton: {
+    backgroundColor: '#1f2937',
+    paddingVertical: 10,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  secondaryButtonText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: '#0b1120',
+    borderRadius: 20,
+    padding: 25,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#1f2933',
+  },
+  modalTitle: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: '#FFFFFF', 
+    marginBottom: 15 
+  },
+  modalText: { 
+    marginBottom: 10, 
+    textAlign: 'center', 
+    color: '#E5E5E5' 
+  },
+  modalButtonRow: { 
+    flexDirection: 'row', 
+    marginTop: 20 
+  },
+  modalButton: {
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+    marginHorizontal: 10,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  acceptButton: { 
+    backgroundColor: '#22c55e' 
+  },
+  declineButton: { 
+    backgroundColor: '#ef4444' 
+  },
+  buttonText: { 
+    color: 'white', 
+    fontWeight: 'bold' 
+  },
 });
