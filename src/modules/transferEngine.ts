@@ -30,14 +30,26 @@ type AckMessage = {
 };
 
 type FinMessage = { type: 'FIN' };
+type ResumeRequestMessage = { type: 'RESUME_REQUEST'; payload: { fileName: string } };
+type ResumeResponseMessage = { type: 'RESUME_RESPONSE'; payload: { sequence: number } };
 
-type ControlMessage = InitMessage | ChunkMessage | AckMessage | FinMessage;
+type ControlMessage = InitMessage | ChunkMessage | AckMessage | FinMessage | ResumeRequestMessage | ResumeResponseMessage;
 
 // --- Sender Logic ---
 
 interface SendFileOptions {
   chunkSize?: number;
   onProgress?: (progress: number) => void;
+}
+
+let isPaused = false;
+
+export function pause() {
+  isPaused = true;
+}
+
+export function resume() {
+  isPaused = false;
 }
 
 export async function sendFile(filePath: string, socket: TcpSocket.Socket, options: SendFileOptions = {}) {
@@ -70,6 +82,16 @@ export async function sendFile(filePath: string, socket: TcpSocket.Socket, optio
 
     // 2. Send chunks
     for (let i = 0; i < totalChunks; i++) {
+      if (isPaused) {
+        await new Promise(resolve => {
+            const check = setInterval(() => {
+                if (!isPaused) {
+                    clearInterval(check);
+                    resolve(null);
+                }
+            }, 100);
+        });
+      }
       const chunk = await RNFS.read(filePath, chunkSize, i * chunkSize, 'base64');
       const chunkChecksum = await SHA.sha256(chunk);
 
@@ -81,7 +103,7 @@ export async function sendFile(filePath: string, socket: TcpSocket.Socket, optio
         },
       };
 
-      // Send header, then raw chunk data
+      // Send heaexp://172.16.0.14:8081der, then raw chunk data
       socket.write(JSON.stringify(chunkMessage) + MESSAGE_SEPARATOR);
       socket.write(Buffer.from(chunk, 'base64'));
 
@@ -197,6 +219,16 @@ export class FileReceiver {
       } else {
         console.warn(`Checksum mismatch for chunk ${sequence}.`);
         // TODO: Send NACK
+      }
+    }
+
+    if (message.type === 'RESUME_REQUEST') {
+      if (this.state === 'receiving' && this.fileHandle.fileName === message.payload.fileName) {
+        const response: ResumeResponseMessage = {
+            type: 'RESUME_RESPONSE',
+            payload: { sequence: this.receivedChunks }
+        };
+        this.socket.write(JSON.stringify(response) + MESSAGE_SEPARATOR);
       }
     }
 
