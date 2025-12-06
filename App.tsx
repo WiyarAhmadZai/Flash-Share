@@ -1,6 +1,4 @@
-import React, { useEffect } from 'react';
-import { initTelemetry } from './src/modules/telemetry';
-import * as Sentry from '@sentry/react-native';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeScreen } from './src/screens/HomeScreen';
