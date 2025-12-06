@@ -12,11 +12,15 @@ export const initTelemetry = async () => {
     const userOptIn = await AsyncStorage.getItem(TELEMETRY_OPT_IN_KEY);
     const isEnabled = userOptIn === 'true' && SENTRY_DSN !== 'YOUR_SENTRY_DSN_HERE';
 
-    Sentry.init({
-      dsn: SENTRY_DSN,
-      enabled: isEnabled,
-      tracesSampleRate: 0.2, // Capture 20% of transactions for performance monitoring
-    });
+    if (SENTRY_DSN !== 'YOUR_SENTRY_DSN_HERE') {
+      Sentry.init({
+        dsn: SENTRY_DSN,
+        enabled: isEnabled,
+        tracesSampleRate: 0.2, // Capture 20% of transactions for performance monitoring
+      });
+    } else if (isInitialized) {
+      console.log('Sentry DSN is a placeholder, so telemetry is disabled.');
+    }
 
     isInitialized = true;
     console.log(`Telemetry initialized. Enabled: ${isEnabled}`);
