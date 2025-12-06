@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { Platform } from 'react-native';
 import TcpSocket from 'react-native-tcp-socket';
-import { AES, utils } from 'react-native-simple-crypto';
+import * as Crypto from 'expo-crypto';
 
 // --- Wire Protocol for Handshake ---
 const MESSAGE_SEPARATOR = '&&&';
@@ -33,7 +33,7 @@ async function performHandshake(socket: TcpSocket.Socket, isInitiator: boolean):
     const ecdh = generateEphemeralKeys();
     const myPublicKey = ecdh.getPublicKey();
 
-    const onData = (data: string | Buffer) => {
+    const onData = async (data: string | Buffer) => {
       const bufferData = Buffer.isBuffer(data) ? data : Buffer.from(data);
       const messageStr = bufferData.toString();
       if (messageStr.includes(MESSAGE_SEPARATOR)) {
@@ -46,10 +46,13 @@ async function performHandshake(socket: TcpSocket.Socket, isInitiator: boolean):
             // Derive the shared secret
             const sharedSecret = ecdh.computeSecret(theirPublicKey);
 
+            // Convert Buffer to ArrayBuffer for the crypto API
+            const sharedSecretArrayBuffer = sharedSecret.buffer.slice(sharedSecret.byteOffset, sharedSecret.byteOffset + sharedSecret.byteLength);
+
             // In a real implementation, use HKDF to derive a key
             // For simplicity, we'll use the secret directly (if it's the right length)
             console.log('Handshake complete. Shared secret derived.');
-            resolve(utils.convertUtf8ToArrayBuffer(sharedSecret.toString()));
+            resolve(sharedSecretArrayBuffer);
           }
         } catch (e) {
           reject(new Error('Handshake failed: Invalid message'));
@@ -77,28 +80,33 @@ export function startHandshakeAsResponder(socket: TcpSocket.Socket): Promise<Arr
 
 // --- Encryption Helpers (AES-256-GCM) ---
 
-export async function encryptChunk(chunk: Buffer, key: ArrayBuffer): Promise<Buffer> {
-  const iv = await utils.randomBytes(16); // AES-CBC block size
-  const plaintext = utils.convertUtf8ToArrayBuffer(chunk.toString('base64'));
+export async function encryptChunk(chunk: Buffer, key: ArrayBuffer): Promise<string> {
+  const iv = Crypto.getRandomBytes(12);
+  const data = chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength);
+  
+  // Expo Crypto doesn't have a single sign method, so we simulate AES-GCM which includes authentication.
+  // The authentication tag is part of the encrypted payload in GCM.
+  const encrypted = await Crypto.encrypt(Crypto.CryptoEncoding.BASE64, data, {
+    algorithm: 'AES-GCM',
+    key: key,
+    iv: iv,
+  });
 
-  const ciphertext = await AES.encrypt(plaintext, key, iv);
-
-  // Combine IV and ciphertext for sending
-  return Buffer.concat([
-    Buffer.from(iv),
-    Buffer.from(ciphertext),
-  ]);
+  return Buffer.from(iv).toString('base64') + '.' + encrypted;
 }
 
-export async function decryptChunk(encryptedData: Buffer, key: ArrayBuffer): Promise<Buffer> {
-  const iv = encryptedData.slice(0, 16);
-  const ciphertext = encryptedData.slice(16);
+export async function decryptChunk(data: string, key: ArrayBuffer): Promise<Buffer> {
+  const [ivBase64, encryptedBase64] = data.split('.');
+  if (!ivBase64 || !encryptedBase64) {
+    throw new Error('Invalid encrypted payload format');
+  }
+  const iv = Buffer.from(ivBase64, 'base64');
 
-  const ciphertextAsArrayBuffer = utils.convertBase64ToArrayBuffer(ciphertext.toString('base64'));
-  const ivAsArrayBuffer = utils.convertBase64ToArrayBuffer(iv.toString('base64'));
+  const decrypted = await Crypto.decrypt(Crypto.CryptoEncoding.BASE64, encryptedBase64, {
+    algorithm: 'AES-GCM',
+    key: key,
+    iv: iv,
+  });
 
-  const decrypted = await AES.decrypt(ciphertextAsArrayBuffer, key, ivAsArrayBuffer);
-  
-  const base64String = utils.convertArrayBufferToBase64(decrypted);
-  return Buffer.from(base64String, 'base64');
+  return Buffer.from(decrypted);
 }
