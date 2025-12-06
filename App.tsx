@@ -17,9 +17,6 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// Initialize telemetry as soon as the app loads
-initTelemetry();
-
 const App: React.FC = () => {
   return (
     <NavigationContainer>
@@ -33,5 +30,25 @@ const App: React.FC = () => {
   );
 };
 
-export default Sentry.wrap(App);
+const WrappedApp = Sentry.wrap(App);
+
+const FinalApp: React.FC = () => {
+  const [isReady, setIsReady] = React.useState(false);
+
+  useEffect(() => {
+    const initialize = async () => {
+      await initTelemetry();
+      setIsReady(true);
+    };
+    initialize();
+  }, []);
+
+  if (!isReady) {
+    return null; // Or a loading spinner
+  }
+
+  return <WrappedApp />;
+};
+
+export default FinalApp;
 
