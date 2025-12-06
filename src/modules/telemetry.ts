@@ -1,4 +1,4 @@
-import { captureEvent, captureException } from '@sentry/react-native';
+import * as Sentry from 'sentry-expo';
 
 // --- Event Logging Functions ---
 
@@ -11,22 +11,14 @@ interface TransferSuccessData extends Record<string, any> {
 }
 
 export const logTransferSuccess = (data: TransferSuccessData) => {
-  captureEvent({
-    message: 'transfer_completed',
-    level: 'info',
-    extra: data,
-  });
+  Sentry.captureMessage(`transfer_completed: ${JSON.stringify(data)}`);
 };
 
 export const logTransferFailure = (reason: string) => {
-  captureEvent({
-    message: 'transfer_failed',
-    level: 'warning',
-    extra: { reason },
-  });
+  Sentry.captureMessage(`transfer_failed: ${reason}`);
 };
 
 // For capturing handled errors
 export const logError = (error: Error, context?: Record<string, any>) => {
-  captureException(error, { extra: context });
+  Sentry.captureException(error, { extra: context });
 };
