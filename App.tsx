@@ -17,10 +17,10 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// Initialize telemetry as soon as the app loads
+initTelemetry();
+
 const App: React.FC = () => {
-  useEffect(() => {
-    initTelemetry();
-  }, []);
   return (
     <NavigationContainer>
       <Stack.Navigator id="RootStack" screenOptions={{ headerShown: false }}>
