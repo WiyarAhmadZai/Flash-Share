@@ -1,16 +1,17 @@
-import { registerRootComponent } from 'expo';
 import * as Sentry from '@sentry/react-native';
-import { initTelemetry } from './src/modules/telemetry';
-
+import { registerRootComponent } from 'expo';
 import App from './App';
 
-// Initialize Sentry before anything else.
-initTelemetry();
+const SENTRY_DSN = 'YOUR_SENTRY_DSN_HERE';
 
-// Wrap the app in Sentry's performance profiler.
-const WrappedApp = Sentry.wrap(App);
+if (SENTRY_DSN !== 'YOUR_SENTRY_DSN_HERE') {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    tracesSampleRate: 0.2,
+  });
+}
 
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
-registerRootComponent(WrappedApp);
+const AppWithSentry = SENTRY_DSN !== 'YOUR_SENTRY_DSN_HERE' ? Sentry.wrap(App) : App;
+
+registerRootComponent(AppWithSentry);
+
