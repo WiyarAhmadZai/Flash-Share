@@ -28,7 +28,8 @@
     "react-native-simple-crypto": "^0.2.15",
     "react-native-tcp-socket": "^6.3.0",
     "react-native-wifi-p2p": "^3.6.0",
-    "react-native-zeroconf": "^0.13.8"
+    "react-native-zeroconf": "^0.13.8",
+    "sentry-expo": "^7.2.0"
   },
   "private": true,
   "devDependencies": {
