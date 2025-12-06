@@ -10,16 +10,17 @@ let isInitialized = false;
 export const initTelemetry = async () => {
   try {
     const userOptIn = await AsyncStorage.getItem(TELEMETRY_OPT_IN_KEY);
-    if (userOptIn === 'true' && SENTRY_DSN !== 'YOUR_SENTRY_DSN_HERE') {
-      Sentry.init({
-        dsn: SENTRY_DSN,
-        tracesSampleRate: 0.2, // Capture 20% of transactions for performance monitoring
-      });
-      isInitialized = true;
-      console.log('Telemetry initialized.');
-    } else {
-      console.log('Telemetry not enabled.');
-    }
+    const isEnabled = userOptIn === 'true' && SENTRY_DSN !== 'YOUR_SENTRY_DSN_HERE';
+
+    Sentry.init({
+      dsn: SENTRY_DSN,
+      enabled: isEnabled,
+      tracesSampleRate: 0.2, // Capture 20% of transactions for performance monitoring
+    });
+
+    isInitialized = true;
+    console.log(`Telemetry initialized. Enabled: ${isEnabled}`);
+
   } catch (error) {
     console.error('Failed to initialize telemetry', error);
   }
@@ -45,7 +46,7 @@ export const setUserConsent = async (hasConsented: boolean) => {
 
 // --- Event Logging Functions ---
 
-interface TransferSuccessData {
+interface TransferSuccessData extends Record<string, any> {
   durationSeconds: number;
   totalBytes: number;
   chunkSizeKb: number;
@@ -72,7 +73,7 @@ export const logTransferFailure = (reason: string) => {
 };
 
 // For capturing handled errors
-export const logError = (error: Error, context?: object) => {
+export const logError = (error: Error, context?: Record<string, any>) => {
   if (!isInitialized) return;
   Sentry.captureException(error, { extra: context });
 };
