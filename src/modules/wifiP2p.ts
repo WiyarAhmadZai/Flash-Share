@@ -18,11 +18,14 @@ export type Peer = {
 // A custom hook to manage Wi-Fi P2P functionality
 export const useWifiP2p = () => {
   const [peers, setPeers] = useState<Peer[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const init = async () => {
+      if (isInitialized) return;
       try {
         await initialize();
+        setIsInitialized(true);
 
         const subscription = subscribeOnPeersUpdates(({ devices }: { devices: Peer[] }) => {
           console.log('Discovered Peers:', devices);
@@ -35,7 +38,7 @@ export const useWifiP2p = () => {
           subscription?.remove();
         };
       } catch (e) {
-        console.error(e);
+        console.error('Initialization failed', e);
       }
     };
 
@@ -45,9 +48,13 @@ export const useWifiP2p = () => {
       // @ts-ignore
       cleanup.then(remove => remove && remove());
     };
-  }, []);
+  }, [isInitialized]);
 
   const startDiscovery = async () => {
+    if (!isInitialized) {
+      console.warn('WifiP2p is not initialized yet.');
+      return;
+    }
     if (Platform.OS !== 'android') return;
 
     try {
