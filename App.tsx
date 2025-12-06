@@ -30,25 +30,5 @@ const App: React.FC = () => {
   );
 };
 
-const WrappedApp = Sentry.wrap(App);
-
-const FinalApp: React.FC = () => {
-  const [isReady, setIsReady] = React.useState(false);
-
-  useEffect(() => {
-    const initialize = async () => {
-      await initTelemetry();
-      setIsReady(true);
-    };
-    initialize();
-  }, []);
-
-  if (!isReady) {
-    return null; // Or a loading spinner
-  }
-
-  return <WrappedApp />;
-};
-
-export default FinalApp;
+export default App;
 
