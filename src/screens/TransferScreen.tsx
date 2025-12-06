@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatBytes, calculateMbps, formatEta } from '../utils/formatters';
 
 // --- Mock Data and Types (replace with real state management) ---
