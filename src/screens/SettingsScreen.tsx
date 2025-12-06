@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, Switch, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setUserConsent } from '../modules/telemetry';
 
